@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from approval_gate import (
     ApprovalGateway,
@@ -24,7 +25,6 @@ from approval_gate import (
 )
 from duplicate_detection import MatchBand, MatchCandidate, find_candidates
 from tool_schemas import ToolValidationError, validate_tool_call
-
 
 # Tools that insert master data. Everything else still needs a schema and an
 # approval; it does not need a duplicate search.
@@ -46,17 +46,17 @@ class Submission:
     including when this call was an idempotent replay of one already there.
     """
 
-    action: Optional[ProposedAction]
+    action: ProposedAction | None
     duplicates: tuple[MatchCandidate, ...]
     blocked: bool
-    block_reason: Optional[BlockReason]
-    validation_error: Optional[ToolValidationError] = None
+    block_reason: BlockReason | None
+    validation_error: ToolValidationError | None = None
 
 
 class RecordStore:
     """In-memory stand-in for the records duplicate detection reads."""
 
-    def __init__(self, records: Optional[list[dict[str, Any]]] = None) -> None:
+    def __init__(self, records: list[dict[str, Any]] | None = None) -> None:
         self._records: list[dict[str, Any]] = []
         for record in records or []:
             self.add(record)
@@ -126,14 +126,16 @@ class GovernedWriteService:
     def __init__(
         self,
         *,
-        gateway: Optional[ApprovalGateway] = None,
-        records: Optional[RecordStore] = None,
-        executor: Optional[Callable[[ProposedAction], str]] = None,
+        gateway: ApprovalGateway | None = None,
+        records: RecordStore | None = None,
+        executor: Callable[[ProposedAction], str] | None = None,
         review_threshold: float = 0.72,
         block_threshold: float = 0.90,
     ) -> None:
         if not 0 <= review_threshold <= block_threshold <= 1:
-            raise ValueError("Thresholds must satisfy 0 <= review_threshold <= block_threshold <= 1")
+            raise ValueError(
+                "Thresholds must satisfy 0 <= review_threshold <= block_threshold <= 1"
+            )
         self.gateway = gateway if gateway is not None else ApprovalGateway()
         self.records = records if records is not None else RecordStore()
         self._executor = executor if executor is not None else IdempotentEchoExecutor()
@@ -167,13 +169,17 @@ class GovernedWriteService:
                     likely_threshold=self._block_threshold,
                 )
                 if any(candidate.band is MatchBand.LIKELY for candidate in duplicates):
-                    return Submission(None, tuple(duplicates), True, BlockReason.LIKELY_DUPLICATE, None)
+                    return Submission(
+                        None, tuple(duplicates), True, BlockReason.LIKELY_DUPLICATE, None
+                    )
 
             action = self.gateway.propose(
                 actor_id,
                 tool_name,
                 payload,
-                review_context={"duplicate_candidates": [_candidate_context(c) for c in duplicates]},
+                review_context={
+                    "duplicate_candidates": [_candidate_context(c) for c in duplicates]
+                },
             )
             if action.state == ApprovalState.PROPOSED:
                 self.gateway.request_approval(action.action_id)
@@ -185,7 +191,7 @@ class GovernedWriteService:
         *,
         approver_id: str,
         approved: bool,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> ProposedAction:
         return self.gateway.resolve(
             action_id,

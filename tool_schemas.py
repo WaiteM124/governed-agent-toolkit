@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 
 class ContactType(str, Enum):
@@ -39,7 +39,9 @@ def _blank_to_none(value: Any) -> Any:
 def _reject_float(value: Any) -> Any:
     # 0.1 + 0.2 is not 0.3. Invoice amounts have to arrive as strings or integers.
     if isinstance(value, float):
-        raise ValueError("Use a string or integer so the amount does not pick up binary float error")
+        raise ValueError(
+            "Use a string or integer so the amount does not pick up binary float error"
+        )
     return value
 
 
@@ -52,8 +54,8 @@ class CreateContactRequest(ToolModel):
 
     contact_type: ContactType
     display_name: str = Field(..., min_length=2, max_length=200)
-    external_reference: Optional[str] = Field(default=None, max_length=50)
-    contact_detail: Optional[str] = Field(
+    external_reference: str | None = Field(default=None, max_length=50)
+    contact_detail: str | None = Field(
         default=None, description="Primary email or phone number for this contact."
     )
     group_id: str = Field(..., min_length=1, max_length=64, pattern=_IDENTIFIER.pattern)
@@ -65,7 +67,7 @@ class CreateContactRequest(ToolModel):
 
     @field_validator("external_reference")
     @classmethod
-    def reference_characters(cls, value: Optional[str]) -> Optional[str]:
+    def reference_characters(cls, value: str | None) -> str | None:
         if value is None:
             return None
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,49}", value):
@@ -74,7 +76,7 @@ class CreateContactRequest(ToolModel):
 
     @field_validator("contact_detail")
     @classmethod
-    def email_or_phone(cls, value: Optional[str]) -> Optional[str]:
+    def email_or_phone(cls, value: str | None) -> str | None:
         if value is None:
             return None
         if "@" in value:
@@ -125,7 +127,7 @@ class CreateInvoiceRequest(ToolModel):
     invoice_date: date
     due_date: date
     currency: str = Field(..., min_length=3, max_length=3)
-    reference: Optional[str] = Field(default=None, max_length=50)
+    reference: str | None = Field(default=None, max_length=50)
     lines: list[InvoiceLine] = Field(..., min_length=1, max_length=100)
 
     @field_validator("currency", mode="before")

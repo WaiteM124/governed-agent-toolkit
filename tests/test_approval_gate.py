@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from conftest import FrozenClock
 
 from approval_gate import (
     ActionNotFoundError,
@@ -11,14 +12,6 @@ from approval_gate import (
     SelfApprovalError,
     compute_idempotency_key,
 )
-
-
-class FrozenClock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
-
-    def __call__(self) -> datetime:
-        return self.now
 
 
 def _awaiting(gateway: ApprovalGateway, **payload: object):
@@ -35,7 +28,9 @@ def test_propose_then_approve_then_execute():
     assert action.state is ApprovalState.AWAITING_APPROVAL
     assert action.approval_expires_at is not None
 
-    gateway.resolve(action.action_id, approved=True, resolved_by="finance-lead", reason="new customer")
+    gateway.resolve(
+        action.action_id, approved=True, resolved_by="finance-lead", reason="new customer"
+    )
     assert action.state is ApprovalState.APPROVED
     assert action.resolved_by == "finance-lead"
     assert action.resolution_reason == "new customer"

@@ -53,7 +53,9 @@ def main() -> None:
         },
     )
     match = blocked.duplicates[0]
-    print(f"   blocked={blocked.blocked} reason={blocked.block_reason.value} action={blocked.action}")
+    print(
+        f"   blocked={blocked.blocked} reason={blocked.block_reason.value} action={blocked.action}"
+    )
     print(f"   matched {match.record_id} at {match.confidence} ({match.band.value})")
     for note in match.notes:
         print(f"   - {note}")
@@ -97,7 +99,9 @@ def main() -> None:
     print("\n5. Submitting the same payload again does not open a second write")
     replay = service.submit("agent-1", "create_contact", zephyr)
     assert replay.action is not None
-    print(f"   same action: {replay.action.action_id == created.action.action_id} state={replay.action.state.value}")
+    print(
+        f"   same action: {replay.action.action_id == created.action.action_id} state={replay.action.state.value}"
+    )
 
     print("\n6. Invoice — schema normalises money and currency, then waits")
     invoice = service.submit(

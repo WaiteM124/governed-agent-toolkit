@@ -1,0 +1,47 @@
+[project]
+name = "governed-agent-toolkit"
+version = "0.1.0"
+description = "Governance layer for agent-proposed write actions: schema validation, duplicate detection, approval gate, and idempotent execution"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0,<3",
+    "rapidfuzz>=3.0,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[tool.setuptools]
+# Flat-layout project: all source files live at the root, not inside a package
+# directory. Tell setuptools there is nothing to install as an importable package.
+packages = []
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["approval_gate", "duplicate_detection", "tool_schemas", "governed_write"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

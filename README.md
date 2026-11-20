@@ -1,5 +1,7 @@
 # governed-agent-toolkit
 
+[![CI](https://github.com/Milesy1/governed-agent-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Milesy1/governed-agent-toolkit/actions/workflows/ci.yml)
+
 A reference implementation of the governance layer that sits between an AI
 agent and a production write path. Every design choice here is about making
 unsafe side-effects impossible without human sign-off — not inconvenient, but
@@ -17,27 +19,20 @@ python -m pytest -v     # 32 tests, all green
 An LLM can call a write tool. That is a _proposal_, not a transaction. This
 toolkit enforces a strict pipeline before anything touches a downstream system:
 
-```
-agent tool call
-    │
-    ▼
-[1] Schema validation          ← tool_schemas.py
-    │  bad args → blocked, no state created
-    ▼
-[2] Idempotent replay          ← approval_gate.py
-    │  live action exists → return it, skip steps 3-4
-    ▼
-[3] Duplicate detection        ← duplicate_detection.py
-    │  LIKELY match → blocked, no state created
-    │  POSSIBLE match → approve with candidates attached
-    ▼
-[4] Approval gate              ← approval_gate.py
-    │  PROPOSED → AWAITING_APPROVAL → APPROVED/REJECTED/EXPIRED
-    ▼
-[5] Execute                    ← governed_write.py
-    │  executor is called, then action is marked EXECUTED
-    ▼
-  downstream system
+```mermaid
+flowchart TD
+    A["Agent tool call"] --> B["[1] Schema validation\ntool_schemas.py"]
+    B -- "bad args" --> X1["Blocked\n(no state created)"]
+    B -- valid --> C["[2] Idempotent replay\napproval_gate.py"]
+    C -- "live action exists" --> R["Return existing action\n(skip steps 3-4)"]
+    C -- new --> D["[3] Duplicate detection\nduplicate_detection.py"]
+    D -- "LIKELY match" --> X2["Blocked\n(no state created)"]
+    D -- "POSSIBLE / none" --> E["[4] Approval gate\napproval_gate.py"]
+    E -- "PROPOSED → AWAITING_APPROVAL" --> W{"Human decision"}
+    W -- approve --> AP["APPROVED"]
+    W -- "reject / expire" --> RJ["REJECTED / EXPIRED"]
+    AP --> F["[5] Execute\ngoverned_write.py"]
+    F --> G["Downstream system\n(action marked EXECUTED)"]
 ```
 
 ---
@@ -98,10 +93,28 @@ returns a stable UUID for each `action_id` so a crash-and-retry is safe.
 
 ---
 
+## Project Structure
+
+```
+approval_gate.py          State machine: propose → await → approve/reject → execute
+duplicate_detection.py    Fuzzy scorer: NAME / IDENTIFIER / CONTACT field kinds
+tool_schemas.py           Pydantic contracts for every write tool
+governed_write.py         Composed pipeline: wires the three modules together
+demo.py                   Walkthrough: six scenarios against an in-memory store
+tests/
+  conftest.py             Shared fixtures (FrozenClock for deterministic time)
+  test_approval_gate.py   State-machine edge cases and idempotency key behaviour
+  test_duplicate_detection.py   Scorer accuracy, threshold logic, ranking
+  test_tool_schemas.py    Normalisation rules and validation error shape
+  test_governed_write.py  Full pipeline: schema → replay → dedupe → approve → execute
+```
+
+---
+
 ## Install and run
 
 ```bash
-pip install rapidfuzz pydantic
+pip install -e ".[dev]"
 python demo.py
 python -m pytest -v
 ```
@@ -144,3 +157,29 @@ clock injection in tests). All optional constructor parameters use
 the action stays in APPROVED so a later `execute()` call retries it. The
 executor is responsible for idempotency on its own side (keyed by `action_id`);
 double-execution is safe.
+
+---
+
+## Limitations
+
+This is a reference implementation with intentional simplifications:
+
+- **In-memory only** — `RecordStore` and `ApprovalGateway` do not persist. A process restart loses all state.
+- **No async support** — The pipeline is synchronous. A production path would need an async executor interface for non-blocking ERP calls.
+- **Duplicate scorer is O(n)** — The scorer walks every existing record. A production master-data path would exact-lookup identifiers in an index first and only fuzzy-score the shortlist.
+- **Single-tenant** — There is no concept of per-tenant record isolation or per-tenant approval policies.
+
+## Production version would add
+
+- **Persistent gateway** — PostgreSQL-backed `ApprovalGateway` with a `UNIQUE` constraint on `idempotency_key` and a background worker for `expire_stale()`.
+- **Identifier index** — Pre-built index on `IDENTIFIER`-kind fields for sub-millisecond lookup before fuzzy scoring begins.
+- **Async executor interface** — Non-blocking ERP/CRM calls with per-action timeout and dead-letter handling.
+- **Webhook / notification layer** — Push an `AWAITING_APPROVAL` event to Slack or an approval UI rather than polling.
+- **Multi-tenancy** — Per-tenant record stores and per-tenant threshold configuration.
+- **Observability** — Structured logging and metrics on proposal rate, approval latency, block rate by reason, and duplicate hit rate.
+
+---
+
+## License
+
+MIT

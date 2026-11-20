@@ -1,19 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import pytest
+from conftest import FrozenClock
 
 from approval_gate import ApprovalGateway, ApprovalState, InvalidTransitionError, SelfApprovalError
 from duplicate_detection import MatchBand
 from governed_write import BlockReason, GovernedWriteService, IdempotentEchoExecutor, RecordStore
-
-
-class FrozenClock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
-
-    def __call__(self) -> datetime:
-        return self.now
-
 
 ACME = {
     "record_id": "rec-acme",
@@ -71,7 +63,13 @@ def test_likely_duplicate_is_blocked_before_an_action_exists():
 def test_possible_duplicate_is_sent_for_approval_with_the_reason_attached():
     service = GovernedWriteService(
         records=RecordStore(
-            [{"record_id": "rec-1", "display_name": "Northwind Traders", "external_reference": "NWT-1"}]
+            [
+                {
+                    "record_id": "rec-1",
+                    "display_name": "Northwind Traders",
+                    "external_reference": "NWT-1",
+                }
+            ]
         )
     )
     submission = service.submit(
@@ -152,7 +150,12 @@ def test_invoice_waits_for_approval_and_does_not_need_a_duplicate_search():
             "due_date": "2026-04-15",
             "currency": "gbp",
             "lines": [
-                {"description": "Retainer", "quantity": "2", "unit_price": "10.00", "tax_code": "vat"}
+                {
+                    "description": "Retainer",
+                    "quantity": "2",
+                    "unit_price": "10.00",
+                    "tax_code": "vat",
+                }
             ],
         },
     )

@@ -15,10 +15,11 @@ import hashlib
 import json
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 class ApprovalState(str, Enum):
@@ -52,9 +53,7 @@ class SelfApprovalError(GovernanceError):
     def __init__(self, action_id: str, actor_id: str) -> None:
         self.action_id = action_id
         self.actor_id = actor_id
-        super().__init__(
-            f"Actor {actor_id} cannot approve their own action {action_id}"
-        )
+        super().__init__(f"Actor {actor_id} cannot approve their own action {action_id}")
 
 
 class PayloadNotSerializableError(GovernanceError):
@@ -123,11 +122,11 @@ def compute_idempotency_key(actor_id: str, action_name: str, payload: dict[str, 
 class TransitionRecord:
     """One row of the append-only history on an action."""
 
-    from_state: Optional[ApprovalState]
+    from_state: ApprovalState | None
     to_state: ApprovalState
     at: datetime
-    actor: Optional[str]
-    reason: Optional[str] = None
+    actor: str | None
+    reason: str | None = None
 
 
 @dataclass
@@ -139,12 +138,12 @@ class ProposedAction:
     idempotency_key: str
     state: ApprovalState = ApprovalState.PROPOSED
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    approval_expires_at: Optional[datetime] = None
-    resolved_at: Optional[datetime] = None
-    resolved_by: Optional[str] = None
-    resolution_reason: Optional[str] = None
-    executed_at: Optional[datetime] = None
-    result_ref: Optional[str] = None
+    approval_expires_at: datetime | None = None
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+    resolution_reason: str | None = None
+    executed_at: datetime | None = None
+    result_ref: str | None = None
     # Shown to the approver. Deliberately excluded from the idempotency key:
     # a changing candidate list must not look like a different business write.
     review_context: dict[str, Any] = field(default_factory=dict)
@@ -155,8 +154,8 @@ class ProposedAction:
         new_state: ApprovalState,
         *,
         now: datetime,
-        actor: Optional[str] = None,
-        reason: Optional[str] = None,
+        actor: str | None = None,
+        reason: str | None = None,
     ) -> None:
         allowed = _ALLOWED_TRANSITIONS[self.state]
         if new_state not in allowed:
@@ -205,7 +204,7 @@ class ApprovalGateway:
         self,
         *,
         approval_ttl: timedelta = timedelta(minutes=30),
-        clock: Optional[Clock] = None,
+        clock: Clock | None = None,
     ) -> None:
         if approval_ttl <= timedelta(0):
             raise ValueError("approval_ttl must be positive")
@@ -223,7 +222,9 @@ class ApprovalGateway:
         with self._lock:
             return self._require(action_id)
 
-    def find_live(self, actor_id: str, action_name: str, payload: dict[str, Any]) -> Optional[ProposedAction]:
+    def find_live(
+        self, actor_id: str, action_name: str, payload: dict[str, Any]
+    ) -> ProposedAction | None:
         """
         Return the action already holding this idempotency key, if any.
 
@@ -244,7 +245,7 @@ class ApprovalGateway:
         action_name: str,
         payload: dict[str, Any],
         *,
-        review_context: Optional[dict[str, Any]] = None,
+        review_context: dict[str, Any] | None = None,
     ) -> ProposedAction:
         actor_id = _require_text(actor_id, "actor_id")
         action_name = _require_text(action_name, "action_name")
@@ -314,7 +315,7 @@ class ApprovalGateway:
         *,
         approved: bool,
         resolved_by: str,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> ProposedAction:
         """
         Record a human decision.
@@ -337,7 +338,11 @@ class ApprovalGateway:
                     reason="approval window elapsed",
                 )
                 return action
-            if approved and resolved_by == action.actor_id and action.state == ApprovalState.AWAITING_APPROVAL:
+            if (
+                approved
+                and resolved_by == action.actor_id
+                and action.state == ApprovalState.AWAITING_APPROVAL
+            ):
                 raise SelfApprovalError(action.action_id, action.actor_id)
             action.transition(
                 ApprovalState.APPROVED if approved else ApprovalState.REJECTED,
@@ -373,7 +378,7 @@ class ApprovalGateway:
                     expired.append(action)
             return expired
 
-    def _live_action(self, key: str, now: datetime) -> Optional[ProposedAction]:
+    def _live_action(self, key: str, now: datetime) -> ProposedAction | None:
         existing_id = self._actions_by_idempotency_key.get(key)
         if existing_id is None:
             return None

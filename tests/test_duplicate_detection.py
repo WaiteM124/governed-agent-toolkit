@@ -2,7 +2,6 @@ import pytest
 
 from duplicate_detection import FieldKind, FieldWeight, MatchBand, find_candidates
 
-
 EXISTING_RECORDS = [
     {
         "record_id": "rec-1",
@@ -108,7 +107,9 @@ def test_ranking_is_deterministic_and_highest_confidence_first():
         threshold=0.3,
     )
     assert candidates[0].record_id == "rec-2"
-    assert candidates == sorted(candidates, key=lambda candidate: (-candidate.confidence, candidate.record_id))
+    assert candidates == sorted(
+        candidates, key=lambda candidate: (-candidate.confidence, candidate.record_id)
+    )
 
 
 def test_max_candidates_truncates_after_ranking():

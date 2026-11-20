@@ -16,9 +16,10 @@ The policy below is the part that has to stay the same when that index exists.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Sequence
+from typing import Any
 
 from rapidfuzz import fuzz
 
@@ -93,13 +94,13 @@ _CONFLICT_CAP_GAP = 0.01
 _EMAIL_AT = "@"
 
 
-def _as_text(value: Any) -> Optional[str]:
+def _as_text(value: Any) -> str | None:
     if value is None:
         return None
     if isinstance(value, str):
         text = value.strip()
         return text or None
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return str(value)
     return None
 
@@ -193,7 +194,7 @@ def _score_record(
     *,
     threshold: float,
     likely_threshold: float,
-) -> Optional[MatchCandidate]:
+) -> MatchCandidate | None:
     record_id = existing.get("record_id")
     if not isinstance(record_id, str) or not record_id.strip():
         raise ValueError("Existing record is missing record_id")
@@ -235,7 +236,9 @@ def _score_record(
             and similarity == 1.0
             and incoming.strip().lower() != current.strip().lower()
         ):
-            notes.append(f"{field_weight.field_name} matches once case and legal suffixes are removed")
+            notes.append(
+                f"{field_weight.field_name} matches once case and legal suffixes are removed"
+            )
 
         matched_fields[field_weight.field_name] = round(similarity, 3)
         weighted_sum += similarity * field_weight.weight
@@ -267,10 +270,10 @@ def find_candidates(
     new_record: dict[str, Any],
     existing_records: Sequence[dict[str, Any]],
     *,
-    weights: Optional[Sequence[FieldWeight]] = None,
+    weights: Sequence[FieldWeight] | None = None,
     threshold: float = 0.72,
     likely_threshold: float = 0.90,
-    max_candidates: Optional[int] = 5,
+    max_candidates: int | None = 5,
 ) -> list[MatchCandidate]:
     """
     Rank existing records against a proposed one.

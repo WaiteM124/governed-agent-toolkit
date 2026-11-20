@@ -9,7 +9,6 @@ from tool_schemas import (
     validate_tool_call,
 )
 
-
 CONTACT = {
     "contact_type": "supplier",
     "display_name": "  Zephyr Consulting  ",
@@ -60,7 +59,12 @@ def test_invoice_money_is_decimal_and_floats_are_rejected():
             "due_date": "2026-04-01",
             "currency": "gbp",
             "lines": [
-                {"description": "Retainer", "quantity": "1.5", "unit_price": "19.99", "tax_code": "vat"}
+                {
+                    "description": "Retainer",
+                    "quantity": "1.5",
+                    "unit_price": "19.99",
+                    "tax_code": "vat",
+                }
             ],
         },
     )
@@ -79,7 +83,12 @@ def test_invoice_money_is_decimal_and_floats_are_rejected():
                 "due_date": "2026-04-01",
                 "currency": "GBP",
                 "lines": [
-                    {"description": "Retainer", "quantity": 1.5, "unit_price": "10.00", "tax_code": "VAT"}
+                    {
+                        "description": "Retainer",
+                        "quantity": 1.5,
+                        "unit_price": "10.00",
+                        "tax_code": "VAT",
+                    }
                 ],
             },
         )
