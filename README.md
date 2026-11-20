@@ -1,6 +1,6 @@
 # governed-agent-toolkit
 
-[![CI](https://github.com/Milesy1/governed-agent-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Milesy1/governed-agent-toolkit/actions/workflows/ci.yml)
+[![CI](https://github.com/WaiteM124/governed-agent-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/WaiteM124/governed-agent-toolkit/actions/workflows/ci.yml)
 
 A reference implementation of the governance layer that sits between an AI
 agent and a production write path. Every design choice here is about making
