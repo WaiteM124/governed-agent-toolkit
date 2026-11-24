@@ -1,0 +1,15 @@
+---
+description: Python engineering standards for modules and tests
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python standards
+
+Canonical detail: `AGENTS.md`.
+
+- Target **Python 3.10+** (CI uses 3.12). Type hints on public APIs; **Pydantic v2** `ToolModel` (and related) contracts at tool-argument boundaries (`extra="forbid"`).
+- Flat layout: `approval_gate.py`, `duplicate_detection.py`, `tool_schemas.py`, `governed_write.py` at the repo root. Match existing dataclass / Enum / threading patterns; use `x if x is not None else default` for optional injected deps (gateways implement `__len__` and can be falsy when empty).
+- Prefer deterministic clocks and fixtures (`FrozenClock`) over patching `datetime.now`. Tests under `tests/` are the spec — known-answer cases for transitions, bands, and normalisation.
+- Before finishing: `ruff check .`, `ruff format --check .`, and `pytest tests/ -v`.
+- Do not mass-reformat unrelated files. Do not bump dependency versions unless the task asks for it. Never log secrets.

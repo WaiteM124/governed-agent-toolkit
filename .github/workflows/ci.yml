@@ -1,3 +1,14 @@
+# Lint and test governed-agent-toolkit.
+#
+# Assumptions:
+# - Python 3.12 in CI (project requires >=3.10; matches local contributor default).
+# - ruff and pytest are pinned in requirements.txt / pyproject.toml [project.optional-dependencies] dev.
+# - Flat layout: lint the repo root (source modules + tests + demo).
+# - No evaluation suite exists yet; pytest alone is the quality gate.
+#   An eval-gate job will be added when a cheap, deterministic eval suite lands.
+# - This workflow does not deploy and does not use repository secrets.
+# - ruff format --check is included because the tree is already formatted.
+
 name: CI
 
 on:
@@ -20,7 +31,17 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
+
+      - name: Verify pinned toolchain
+        run: |
+          ruff --version
+          pytest --version
+          python -c "import importlib.metadata as m; assert m.version('ruff') == '0.17.6', m.version('ruff')"
+          python -c "import importlib.metadata as m; assert m.version('pytest') == '9.2.0', m.version('pytest')"
 
       - name: Lint with ruff
         run: |

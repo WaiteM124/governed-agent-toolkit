@@ -1,0 +1,15 @@
+---
+description: Non-negotiable governed-agent-toolkit product and contribution principles
+alwaysApply: true
+---
+
+# Core principles
+
+Canonical detail: `AGENTS.md`.
+
+- **Proposals are not transactions.** Agent tool calls must not mutate downstream systems without schema validation, governance, and (where required) human approval. No bypass execute paths.
+- **Schema before state.** Invalid arguments create no approval-gateway state.
+- **Four-eyes on approve.** The proposer cannot approve their own action; withdrawal by the proposer is allowed.
+- **LIKELY blocks; POSSIBLE reviews.** Duplicate LIKELY refuses create; POSSIBLE attaches review context. Conflicting identifiers stay reviewable, not auto-blocked.
+- **Do not weaken tests** to green CI. Keep PRs small and scoped. No secrets in the repo.
+- Prefer matching existing patterns. State assumptions in the PR. When rules conflict, `AGENTS.md` wins.

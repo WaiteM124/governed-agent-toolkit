@@ -180,6 +180,10 @@ This is a reference implementation with intentional simplifications:
 
 ---
 
+## Contributing
+
+Setup, tests, PR checklist, and agent rules: see [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Decision records live in [docs/decisions/](docs/decisions/).
+
 ## License
 
 MIT
