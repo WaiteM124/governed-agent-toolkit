@@ -20,5 +20,6 @@ Optional metadata at the top: **Status** (Accepted / Superseded / Proposed), **D
 | [ADR-001](ADR-001-schema-before-governance-state.md) | Schema validation before governance state | Accepted (reconstructed) |
 | [ADR-002](ADR-002-four-eyes-and-idempotency-keys.md) | Four-eyes approval and idempotency key release | Accepted (reconstructed) |
 | [ADR-003](ADR-003-duplicate-bands-and-identifier-conflict.md) | Duplicate match bands and conflicting-identifier cap | Accepted (reconstructed) |
+| [ADR-004](ADR-004-adversarial-eval-gate.md) | Deterministic adversarial eval gate in CI | Accepted |
 
 When behaviour changes, update or supersede the relevant ADR and keep [AGENTS.md](../../AGENTS.md) aligned.

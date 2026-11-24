@@ -40,7 +40,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["approval_gate", "duplicate_detection", "tool_schemas", "governed_write"]
+known-first-party = [
+    "approval_gate",
+    "duplicate_detection",
+    "tool_schemas",
+    "governed_write",
+    "evals",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

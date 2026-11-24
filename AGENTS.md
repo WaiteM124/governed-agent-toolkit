@@ -17,12 +17,17 @@ Single source of truth for humans and AI agents (including Cursor) working in th
 | `tool_schemas.py` | Pydantic `ToolModel` contracts for write tools (`extra="forbid"`, normalisation rules) |
 | `governed_write.py` | `GovernedWriteService` pipeline wiring the three modules; in-memory `RecordStore` / echo executor |
 | `demo.py` | Walkthrough: six scenarios against the in-memory store |
+| `evals/` | Deterministic adversarial eval suite (GullibleAgent, no API keys) |
+| `evals/cases/` | JSON attack and legitimate-allow cases |
+| `evals/runner.py` | Eval runner + baseline gate (`python -m evals.runner`) |
+| `evals/baseline.json` | Floors for attack block rate and legitimate allow rate |
+| `evals/results/` | Latest gate results JSON written by the runner |
 | `tests/` | Known-answer and edge-case coverage for gate, scorer, schemas, and full pipeline |
 | `tests/conftest.py` | Shared fixtures (`FrozenClock` for deterministic time) |
 | `pyproject.toml` | Package metadata, pinned-ish deps, ruff + pytest config |
 | `requirements.txt` | Runtime + test install pins used by contributors and CI |
-| `Makefile` | `demo`, `test`, `lint`, `format`, `clean` |
-| `.github/workflows/ci.yml` | PR/push CI: pinned ruff + pytest |
+| `Makefile` | `demo`, `test`, `eval`, `lint`, `format`, `clean` |
+| `.github/workflows/ci.yml` | PR/push CI: pinned ruff + pytest + `eval-gate` job |
 | `docs/decisions/` | Architecture decision records |
 
 Stack: **Python 3.10+** (CI uses 3.12), Pydantic v2, rapidfuzz, pytest, ruff. No external services — everything runs in-memory. Flat layout: modules live at the repo root (setuptools `packages = []`).
@@ -43,12 +48,12 @@ Stack: **Python 3.10+** (CI uses 3.12), Pydantic v2, rapidfuzz, pytest, ruff. No
 
 - **Typed code.** Type hints on public functions and methods. Pydantic models at tool-argument and other I/O boundaries (`ToolModel`, validated payloads).
 - **Tests as the spec.** Prefer known-answer / golden cases for state transitions, scoring bands, and normalisation. Cover happy path, edge cases, and block/reject behaviour.
-- **Green before PR.** `ruff check` / `ruff format --check` and `pytest` must pass locally. CI must stay green.
+- **Green before PR.** `ruff check` / `ruff format --check`, `pytest`, and `python -m evals.runner` must pass locally. CI must stay green.
 - **Small, focused PRs.** One concern per PR; clear title and description; state assumptions and out-of-scope items.
 - **No secrets in git.** Use env vars or a secret manager only. Never commit API keys, credentials, private keys, or tokens in code, config, or remotes. Prefer `.env.example` when documenting required vars.
 - **Pin versions for production-bound work.** Prefer pinned dependency versions (see `requirements.txt` / `pyproject.toml`). Do not silently bump tooling or libraries in a feature PR.
 - **Structured logging.** When adding observability, use structured (preferably JSON) logs with correlation / action ids; never log secrets or full sensitive payloads.
-- **AI / LLM outputs are untrusted.** This toolkit governs agent *proposals*; treat model output as input to validate, never as authority to write. Evaluate behaviour with tests; do not trust LLM output blindly.
+- **AI / LLM outputs are untrusted.** This toolkit governs agent *proposals*; treat model output as input to validate, never as authority to write. Evaluate behaviour with the adversarial eval suite and unit tests; do not trust LLM output blindly.
 - **Docs track behaviour.** Update README / ADRs / this file when behaviour, contracts, or run instructions change. Do not invent features in docs.
 
 ### Definition of done
@@ -56,7 +61,7 @@ Stack: **Python 3.10+** (CI uses 3.12), Pydantic v2, rapidfuzz, pytest, ruff. No
 - [ ] Product principles above respected
 - [ ] Types and Pydantic contracts in place at boundaries
 - [ ] Tests added or updated; known-answer cases where behaviour is specified
-- [ ] Lint and tests pass (`make lint` / `make test` or CI equivalents)
+- [ ] Lint, tests, and eval-gate pass (`make lint` / `make test` / `make eval` or CI equivalents)
 - [ ] No secrets introduced
 - [ ] Docs updated if behaviour or workflow changed
 
@@ -85,10 +90,11 @@ make demo
 ```bash
 make lint          # ruff check . && ruff format --check .
 make test          # pytest tests/ -v
-# or: python -m pytest -v
+make eval          # adversarial eval gate (deterministic; no API key)
+# or: python -m evals.runner
 ```
 
-There is **no separate evaluation / adversarial suite** in this repository today. The 32 pytest cases (including pipeline and known-answer scorer cases) are the quality gate. An eval-gate CI job is therefore **not** added; introduce one when a cheap, deterministic eval suite lands (see follow-ups in CONTRIBUTING).
+The eval gate loads `evals/cases/`, drives a `GullibleAgent` through the wired harness, writes `evals/results/latest.json`, and compares rates to `evals/baseline.json`. CI job `eval-gate` fails if any attack produces an executor side effect, or if the legitimate allow rate drops below baseline. Cases cover prompt injection via tool outputs, tools outside the schema registry, argument tampering, privilege escalation, skipping human approval, audit-log bypass, data exfiltration, and legitimate in-policy allows. If a case finds a real bypass, fix product code in a **separate commit** with a regression test (see [ADR-004](docs/decisions/ADR-004-adversarial-eval-gate.md)).
 
 Optional local hooks:
 

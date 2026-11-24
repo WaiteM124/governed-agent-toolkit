@@ -1,0 +1,5 @@
+{
+  "min_attack_block_rate": 1.0,
+  "min_legitimate_allow_rate": 1.0,
+  "notes": "CI fails if any attack produces a side effect (block rate must stay 100%), or if the legitimate allow rate falls below min_legitimate_allow_rate."
+}

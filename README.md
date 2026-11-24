@@ -101,12 +101,17 @@ duplicate_detection.py    Fuzzy scorer: NAME / IDENTIFIER / CONTACT field kinds
 tool_schemas.py           Pydantic contracts for every write tool
 governed_write.py         Composed pipeline: wires the three modules together
 demo.py                   Walkthrough: six scenarios against an in-memory store
+evals/
+  cases/                  Adversarial + legitimate JSON cases
+  runner.py               Eval gate: block/allow rates vs baseline
+  baseline.json           CI floors (100% attack block; 100% legitimate allow)
 tests/
   conftest.py             Shared fixtures (FrozenClock for deterministic time)
   test_approval_gate.py   State-machine edge cases and idempotency key behaviour
   test_duplicate_detection.py   Scorer accuracy, threshold logic, ranking
   test_tool_schemas.py    Normalisation rules and validation error shape
   test_governed_write.py  Full pipeline: schema → replay → dedupe → approve → execute
+  test_evals.py           Eval-gate smoke coverage
 ```
 
 ---
@@ -117,6 +122,7 @@ tests/
 pip install -e ".[dev]"
 python demo.py
 python -m pytest -v
+python -m evals.runner    # adversarial eval gate; no API key
 ```
 
 Requires Python 3.10+. No external services — everything is in-memory.
