@@ -1,4 +1,4 @@
-.PHONY: demo test lint format clean
+.PHONY: demo test eval lint format clean
 
 # Run the walkthrough against the in-memory store
 demo:
@@ -7,6 +7,10 @@ demo:
 # Run the full test suite
 test:
 	pytest tests/ -v
+
+# Adversarial eval gate (deterministic; no API key)
+eval:
+	python -m evals.runner
 
 # Check for lint and formatting issues
 lint:

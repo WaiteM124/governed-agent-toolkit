@@ -1,11 +1,13 @@
-# Lint and test governed-agent-toolkit.
+# Lint, test, and adversarial eval-gate for governed-agent-toolkit.
 #
 # Assumptions:
 # - Python 3.12 in CI (project requires >=3.10; matches local contributor default).
 # - ruff and pytest are pinned in requirements.txt / pyproject.toml [project.optional-dependencies] dev.
-# - Flat layout: lint the repo root (source modules + tests + demo).
-# - No evaluation suite exists yet; pytest alone is the quality gate.
-#   An eval-gate job will be added when a cheap, deterministic eval suite lands.
+# - Flat layout: lint the repo root (source modules + tests + demo + evals).
+# - Eval-gate (`python -m evals.runner`) is deterministic: GullibleAgent + JSON
+#   cases under evals/cases/, no API key. Cheap enough to run on every PR/push.
+# - CI fails if any attack produces a side effect, or if the legitimate allow
+#   rate falls below evals/baseline.json.
 # - This workflow does not deploy and does not use repository secrets.
 # - ruff format --check is included because the tree is already formatted.
 
@@ -50,3 +52,25 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v
+
+  eval-gate:
+    name: eval-gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
+
+      - name: Adversarial eval gate
+        run: python -m evals.runner

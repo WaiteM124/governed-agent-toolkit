@@ -33,9 +33,10 @@ make demo                 # or: python demo.py
 ```bash
 make lint                 # ruff check . && ruff format --check .
 make test                 # pytest tests/ -v
+make eval                 # adversarial eval gate (no API key)
 ```
 
-There is no separate eval suite yet; pytest is the quality gate (including known-answer scorer and pipeline cases).
+Pytest covers known-answer scorer and pipeline cases. `make eval` runs the deterministic adversarial suite against `evals/baseline.json`; CI job `eval-gate` enforces it on every PR.
 
 ## Branch and PR conventions
 
@@ -49,13 +50,12 @@ There is no separate eval suite yet; pytest is the quality gate (including known
 ## Definition of done
 
 - Product principles in `AGENTS.md` respected (proposals ≠ transactions; schema before state; four-eyes; LIKELY/POSSIBLE policy; intentional idempotency)
-- Tests added/updated and passing; lint clean
+- Tests added/updated and passing; lint clean; eval-gate green
 - No secrets in the change
 - Docs updated when behaviour or workflow changes
-- CI green on the PR
+- CI green on the PR (including `eval-gate`)
 
 ## Follow-ups (tooling / process)
 
-- Add a deterministic eval / adversarial fixture suite and an `eval-gate` CI job once it exists and is cheap enough for every PR.
 - Stop tracking `governed_agent_toolkit.egg-info/` (now gitignored); remove from history if desired.
 - Persist gateway / record store, identifier index, async executor, multi-tenancy — see README “Production version would add”.
